@@ -1,6 +1,8 @@
 const $wrapper = document.querySelector('[data-wrapper]')
 const $addBtn = document.querySelector('[data-add_button]')
 const $modalAdd = document.querySelector('[data-modal]')
+const $spinner = document.querySelector('[data-spinner]')
+const $formErrorMsg = document.querySelector('[data-errmsg]')
 
 const HIDDEN_CLASS = 'hidden'
 
@@ -37,6 +39,7 @@ $wrapper.addEventListener('click', async (event) => {
         break;
   
       case 'open':
+
         break;
 
       case 'edit':
@@ -53,6 +56,7 @@ $addBtn.addEventListener('click', () => {
 
 document.forms.add_cats_form.addEventListener('submit', async (event) => {
     event.preventDefault();
+    $formErrorMsg.innerText = '';
     const data = Object.fromEntries(new FormData(event.target).entries());
   
     data.id = Number(data.id)
@@ -61,10 +65,17 @@ document.forms.add_cats_form.addEventListener('submit', async (event) => {
     data.favorite = data.favorite == 'on'
   
     const res = await api.addNewCat(data)
-    const responce = await res.json()
 
-    event.target.reset() // сброс формы
-  $modalAdd.classList.add(HIDDEN_CLASS) // убираем модалку
+    if (res.ok) {
+      $wrapper.replaceChildren();
+      getCatsFunc()
+      $modalAdd.classList.add(HIDDEN_CLASS)
+      return event.target.reset()
+    } else {
+      const responce = await res.json();
+      $formErrorMsg.innerText = responce.message
+      return;
+    }
 })
 
 const firstGettingCats = async() =>{
@@ -75,3 +86,33 @@ const firstGettingCats = async() =>{
     }); 
 }
 firstGettingCats();
+
+const getCatsFunc = async () => {
+  $spinner.classList.remove(HIDDEN_CLASS)
+  const res = await api.getAllCats();
+
+  if (res.status !== 200) {
+    const $errorMessage = document.createElement('p');
+    $errorMessage.classList.add('error-msg');
+    $errorMessage.innerText = 'Произошла ошибка, попробуйте выполнить запрос позже';
+
+    return $wrapper.appendChild($errorMessage);
+  }
+
+  const data = await res.json();
+
+  if (data.length === 0) {
+    const $notificationMessage = document.createElement('p');
+    $notificationMessage.innerText = 'Список котов пуст, добавьте первого котика';
+
+    return $wrapper.appendChild($notificationMessage);
+  }
+
+  setTimeout(() => {
+    $spinner.classList.add(HIDDEN_CLASS)
+    data.forEach(cat => {
+      $wrapper.insertAdjacentHTML('afterbegin', generateCatCard(cat))
+    });
+  }, 1000);
+}
+getCatsFunc();

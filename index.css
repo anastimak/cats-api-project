@@ -22,4 +22,8 @@
   
 .hidden {
     display: none;
-} 
+}
+
+.error-msg{
+    color: red;
+  }
